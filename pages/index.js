@@ -76,7 +76,6 @@ export default function HomePage() {
         setTSupply(supply);
       } catch (error) {
         alert(`Error: ${error}`);
-        // setBalance(0);
       }
     }
   };
@@ -88,7 +87,10 @@ export default function HomePage() {
         const mintTx = await erc20Contract.mint(to, value);
         await mintTx.wait();
 
-        alert("Benefit claimed successfully");
+        alert(`
+          Token minted successfully to
+          ${to}
+          `);
       } catch (error) {
         alert(`Error: ${error}`);
       }
@@ -101,7 +103,10 @@ export default function HomePage() {
         const transferTx = await erc20Contract.transfer(to, value);
         await transferTx.wait();
 
-        alert("Benefit claimed successfully");
+        alert(`
+          ${value} tokens transfered to
+          ${to}
+          `);
       } catch (error) {
         alert(`Error: ${error}`);
       }
@@ -115,7 +120,7 @@ export default function HomePage() {
         const burnTx = await erc20Contract.burn(value);
         await burnTx.wait();
 
-        alert("Benefit claimed successfully");
+        alert(`${value} tokens burnt successfully!`);
       } catch (error) {
         alert(`Error: ${error}`);
       }

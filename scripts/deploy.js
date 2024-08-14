@@ -9,14 +9,15 @@ const {ethers} = require("ethers");
 
 async function main() {
 
-  const [deployer] = await hre.ethers.getSigners();
-
-  const Claims = await hre.ethers.getContractFactory("Claims");
-  const claims = await Claims.deploy();
-  await claims.deployed();
+  const ERC20 = await hre.ethers.getContractFactory("ERC20");
+  const eRC20 = await ERC20.deploy();
+  await eRC20.deployed();
 
 
-  console.log(`${deployer.address} deploys Claims contract to ${claims.address}`);
+  console.log(`
+    ERC20 contract deployed to:
+    ${eRC20.address}
+    `);
 
 }
 

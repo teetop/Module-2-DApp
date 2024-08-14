@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import atm_abi from "../artifacts/contracts/Claims.sol/Claims.json";
+import atm_abi from "../artifacts/contracts/ERC20.sol/ERC20.json";
 
 export default function HomePage() {
   const [ethWallet, setEthWallet] = useState(undefined);
   const [account, setAccount] = useState(undefined);
-  const [claimsContract, setClaimsContract] = useState(undefined);
+  const [erc20Contract, setERC20Contract] = useState(undefined);
 
   const [address, setAddress] = useState("");
   const [amount, setAmount] = useState("");
   const [time, setTime] = useState("");
-  const [balance, setBalance] = useState("");
+  const [tSupply, setTSupply] = useState("");
   const [isUserViewed, setIsUserViewed] = useState(false);
 
   const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
@@ -45,22 +45,21 @@ export default function HomePage() {
     const accounts = await ethWallet.request({ method: "eth_requestAccounts" });
     handleAccount(accounts);
 
-    // once wallet is set we can get a reference to our deployed contract
-    getClaimsContract();
+    getERC20Contract();
   };
 
-  const getClaimsContract = () => {
+  const getERC20Contract = () => {
     const provider = new ethers.providers.Web3Provider(ethWallet);
     const signer = provider.getSigner();
-    const smartContract = new ethers.Contract(contractAddress, atmABI, signer);
+    const contract = new ethers.Contract(contractAddress, atmABI, signer);
 
-    setClaimsContract(smartContract);
+    setERC20Contract(contract);
   };
 
-  const yourBalance = async (userAddress) => {
-    if (claimsContract) {
+  const balanceOf = async (userAddress) => {
+    if (erc20Contract) {
       try {
-        const bal = await claimsContract.yourBalance();
+        const bal = await erc20Contract.balanceOf();
         setBalance(bal);
       } catch (error) {
         alert(`Error: ${error}`);
@@ -69,28 +68,52 @@ export default function HomePage() {
     }
   };
 
-  const addBenefitiary = async (_address, _amount, _time) => {
-    if (claimsContract) {
-      try {
-        const addTx = await claimsContract.addBenefitiary(
-          _address,
-          _amount,
-          _time
-        );
-        await addTx.wait();
 
-        alert(`${_address} added as beneficiary successfully`);
+  const totalSupply = async (userAddress) => {
+    if (erc20Contract) {
+      try {
+        const supply = await erc20Contract.totalSupply();
+        setTSupply(supply);
+      } catch (error) {
+        alert(`Error: ${error}`);
+        // setBalance(0);
+      }
+    }
+  };
+
+
+  const mint = async (to, value) => {
+    if (erc20Contract) {
+      try {
+        const mintTx = await erc20Contract.mint(to, value);
+        await mintTx.wait();
+
+        alert("Benefit claimed successfully");
       } catch (error) {
         alert(`Error: ${error}`);
       }
     }
   };
 
-  const claimBenefit = async () => {
-    if (claimsContract) {
+  const transfer = async (to, value) => {
+    if (erc20Contract) {
       try {
-        const claimTx = await claimsContract.claimBenefit();
-        await claimTx.wait();
+        const transferTx = await erc20Contract.transfer(to, value);
+        await transferTx.wait();
+
+        alert("Benefit claimed successfully");
+      } catch (error) {
+        alert(`Error: ${error}`);
+      }
+    }
+  };
+
+
+  const burn = async (value) => {
+    if (erc20Contract) {
+      try {
+        const burnTx = await erc20Contract.burn(value);
+        await burnTx.wait();
 
         alert("Benefit claimed successfully");
       } catch (error) {

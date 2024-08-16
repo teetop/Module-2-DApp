@@ -1,19 +1,24 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
-import atm_abi from "../artifacts/contracts/ERC20.sol/ERC20.json";
+import atm_abi from "../artifacts/contracts/Game.sol/Game.json";
+
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export default function HomePage() {
   const [ethWallet, setEthWallet] = useState(undefined);
   const [account, setAccount] = useState(undefined);
-  const [erc20Contract, setERC20Contract] = useState(undefined);
+  const [gameContract, setGameContract] = useState(undefined);
 
-  const [address, setAddress] = useState("");
-  const [amount, setAmount] = useState("");
-  const [time, setTime] = useState("");
-  const [tSupply, setTSupply] = useState("");
+  const [guess, setGuess] = useState("");
+  const [gameMoney, setGameMoney] = useState("");
+  const [balAdd, setBalAdd] = useState("");
+  const [mist, setMist] = useState("");
+  const [balance, setBalance] = useState("");
   const [isUserViewed, setIsUserViewed] = useState(false);
+  const [step, setStep] = useState(0);
 
-  const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+  const contractAddress = "0x8A791620dd6260079BF849Dc5567aDC3F2FdC318";
   const atmABI = atm_abi.abi;
 
   const getWallet = async () => {
@@ -31,6 +36,7 @@ export default function HomePage() {
     if (account) {
       console.log("Account connected: ", account);
       setAccount(account);
+      setStep(1);
     } else {
       console.log("No account found");
     }
@@ -38,7 +44,7 @@ export default function HomePage() {
 
   const connectAccount = async () => {
     if (!ethWallet) {
-      alert("MetaMask wallet is required to connect");
+      toast.error("MetaMask wallet is required to connect");
       return;
     }
 
@@ -53,309 +59,337 @@ export default function HomePage() {
     const signer = provider.getSigner();
     const contract = new ethers.Contract(contractAddress, atmABI, signer);
 
-    setERC20Contract(contract);
+    setGameContract(contract);
   };
 
   const balanceOf = async (userAddress) => {
-    if (erc20Contract) {
+    if (gameContract) {
       try {
-        const bal = await erc20Contract.balanceOf();
+        const bal = await gameContract.balanceOf(userAddress);
         setBalance(bal);
       } catch (error) {
-        alert(`Error: ${error}`);
+        toast.error(`Error: ${error}`);
         setBalance(0);
       }
     }
   };
 
-
-  const totalSupply = async (userAddress) => {
-    if (erc20Contract) {
+  const setMistery = async (mistery) => {
+    if (gameContract) {
       try {
-        const supply = await erc20Contract.totalSupply();
-        setTSupply(supply);
+        const misteryTx = await gameContract.setMistery(mistery);
+        await misteryTx.wait();
+
+        toast.success(`Mistery set!`);
+        setStep(2);
       } catch (error) {
-        alert(`Error: ${error}`);
+        toast.error(`Error: ${error}`);
       }
     }
   };
 
-
-  const mint = async (to, value) => {
-    if (erc20Contract) {
+  const playGame = async (gameAmount, gue) => {
+    if (gameContract) {
       try {
-        const mintTx = await erc20Contract.mint(to, value);
-        await mintTx.wait();
+        const playTx = await gameContract.playGame(gameAmount, gue);
+        const result = await playTx.wait();
 
-        alert(`
-          Token minted successfully to
-          ${to}
-          `);
+        const event = result.events.find(
+          (event) => event.event === "GamePlayed"
+        );
+        const gameResult = event.args.result;
+
+        toast.success(`${gameResult}`);
       } catch (error) {
-        alert(`Error: ${error}`);
+        toast.error(`Error: ${error}`);
       }
     }
   };
 
-  const transfer = async (to, value) => {
-    if (erc20Contract) {
-      try {
-        const transferTx = await erc20Contract.transfer(to, value);
-        await transferTx.wait();
-
-        alert(`
-          ${value} tokens transfered to
-          ${to}
-          `);
-      } catch (error) {
-        alert(`Error: ${error}`);
-      }
-    }
-  };
-
-
-  const burn = async (value) => {
-    if (erc20Contract) {
-      try {
-        const burnTx = await erc20Contract.burn(value);
-        await burnTx.wait();
-
-        alert(`${value} tokens burnt successfully!`);
-      } catch (error) {
-        alert(`Error: ${error}`);
-      }
-    }
-  };
-
-  const handleSubmit = async (e) => {
+  const handleMist = async (e) => {
     e.preventDefault();
-    await yourBalance();
+    await setMistery(mist);
+  };
+
+  const handlePlay = async (e) => {
+    e.preventDefault();
+    await playGame(gameMoney, guess);
+  };
+
+  const handleBal = async (e) => {
+    e.preventDefault();
+    await balanceOf(balAdd);
     setIsUserViewed(true);
-  };
-
-  const handleAddBeneficiary = async (e) => {
-    e.preventDefault();
-    await addBenefitiary(address, amount, time);
-  };
-
-  const initUser = () => {
-    const buttonStyle = {
-      backgroundColor: "#00796b",
-      color: "white",
-      padding: "15px 35px",
-      textAlign: "center",
-      textDecoration: "none",
-      display: "inline-block",
-      fontSize: "16px",
-      margin: "4px 2px",
-      cursor: "pointer",
-      borderRadius: "12px", // Curved edges
-      boxShadow: "0 4px 8px 0 rgba(0, 0, 0, 0.2)", // Shadow
-      border: "none",
-      justifyContent: "center",
-    };
-
-    // Check to see if user is connected. If not, connect to their account
-    if (!account) {
-      return (
-        <button style={buttonStyle} onClick={connectAccount}>
-          Please connect your Metamask wallet
-        </button>
-      );
-    }
-
-    return (
-      <div className="split-container">
-        <div className="left-pane">
-          <div className="admin">Admin</div>
-          <form className="form" onSubmit={handleAddBeneficiary}>
-            <label htmlFor="address">Address</label>
-            <input
-              type="text"
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="0x...."
-              className="input"
-            />
-            <label htmlFor="amount">Amount</label>
-            <input
-              type="number"
-              id="amount"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="above 0"
-              className="input"
-            />
-            <label htmlFor="time">Time</label>
-            <input
-              type="number"
-              id="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="above 0"
-              className="input"
-            />
-            <button type="submit" className="button">
-              Add Beneficiary
-            </button>
-          </form>
-        </div>
-
-        <div className="right-pane">
-          <div className="button-container">
-            <button type="submit" className="button" onClick={claimBenefit}>
-              Claim Benefit
-            </button>
-            <div className="separator"></div>
-            <button type="submit" className="button" onClick={handleSubmit}>
-              Check Balance
-            </button>
-          </div>
-
-          {isUserViewed && (
-            <>
-              <p className="balance-info">{`Balance: ${balance}`}</p>
-            </>
-          )}
-        </div>
-
-        <style jsx>{`
-          .split-container {
-            display: flex;
-            height: 70vh;
-            width: 100%;
-            font-family: Arial, sans-serif;
-          }
-
-          .left-pane,
-          .right-pane {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-          }
-
-          .left-pane {
-            background-color: #b2dfdb; /* Light teal background */
-          }
-
-          .right-pane {
-            background-color: #80cbc4; /* Medium teal background */
-          }
-
-          .form {
-            width: 80%;
-          }
-
-          .admin {
-            margin: 0;
-            font-size: 2em;
-            font-weight: bold;
-            text-align: center;
-            font-family: "Roboto", sans-serif;
-          }
-
-          .input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 1em;
-          }
-
-          .button-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-          }
-
-          .button {
-            background-color: #00796b;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            margin: 10px 0;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 1em;
-            width: 100%;
-            max-width: 200px;
-          }
-
-          .button:hover {
-            background-color: #00695c;
-          }
-
-          .separator {
-            width: 100%;
-            height: 1px;
-            background-color: #ccc;
-            margin: 20px 0;
-          }
-
-          .balance-info {
-            font-size: 1.5em;
-            margin: 20px 0;
-            color: #333;
-          }
-        `}</style>
-      </div>
-    );
   };
 
   useEffect(() => {
     getWallet();
   }, []);
 
+  const renderStepContent = () => {
+    switch (step) {
+      case 0:
+        return (
+          <button style={buttonStyle} onClick={connectAccount}>
+            Please connect your Metamask wallet
+          </button>
+        );
+
+      case 1:
+        return (
+          <div>
+            <form className="form" onSubmit={handleMist}>
+              <label htmlFor="address">Mistery</label>
+              <input
+                type="text"
+                id="address"
+                value={mist}
+                onChange={(e) => setMist(e.target.value)}
+                placeholder="A-Z"
+                className="input"
+              />
+              <button type="submit" className="button">
+                Set Mistery
+              </button>
+            </form>
+
+            <style jsx>{`
+              .form {
+                width: 80%;
+              }
+
+              .input {
+                width: 100%;
+                padding: 12px;
+                margin: 12px 0;
+                border: 1px solid #2e3a59;
+                border-radius: 8px;
+                font-size: 1em;
+                transition: border-color 0.3s ease-in-out; /* Smooth transition */
+              }
+
+              .input:focus {
+                border-color: #91b8d9; /* Highlight on focus */
+                outline: none;
+              }
+
+              .button {
+                background-color: #1e90ff; /* Cool blue */
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                margin: 12px 0;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1em;
+                width: 100%;
+                max-width: 220px;
+                transition: background-color 0.3s ease-in-out,
+                  transform 0.3s ease-in-out; /* Smooth transition */
+              }
+
+              .button:hover {
+                background-color: #1c75d8; /* Darker blue on hover */
+                transform: translateY(-3px); /* Slight lift on hover */
+              }
+            `}</style>
+          </div>
+        );
+      case 2:
+        return (
+          <div>
+            <div className="right-pane">
+              <form className="form" onSubmit={handlePlay}>
+                <label htmlFor="address">Amount</label>
+                <input
+                  type="number"
+                  id="address"
+                  value={gameMoney}
+                  onChange={(e) => setGameMoney(e.target.value)}
+                  placeholder="100"
+                  className="input"
+                />
+                <label htmlFor="mis">Guess</label>
+                <input
+                  type="text"
+                  id="mis"
+                  value={guess}
+                  onChange={(e) => setGuess(e.target.value)}
+                  placeholder="A-Z"
+                  className="input"
+                />
+                <button type="submit" className="button">
+                  Play Game
+                </button>
+              </form>
+
+              <div className="separator"></div>
+
+              <form className="form" onSubmit={handleBal}>
+                <label htmlFor="address">Address</label>
+                <input
+                  type="text"
+                  id="address"
+                  value={balAdd}
+                  onChange={(e) => setBalAdd(e.target.value)}
+                  placeholder="0x...."
+                  className="input"
+                />
+                <button type="submit" className="button">
+                  Balance
+                </button>
+              </form>
+
+              {isUserViewed && (
+                <p className="balance-info">{`Balance: ${balance}`}</p>
+              )}
+            </div>
+
+            <style jsx>{`
+              .form {
+                width: 80%;
+              }
+
+              .input {
+                width: 100%;
+                padding: 12px;
+                margin: 12px 0;
+                border: 1px solid #2e3a59;
+                border-radius: 8px;
+                font-size: 1em;
+                transition: border-color 0.3s ease-in-out;
+              }
+
+              .input:focus {
+                border-color: #91b8d9;
+                outline: none;
+              }
+
+              .button {
+                background-color: #1e90ff;
+                color: white;
+                border: none;
+                padding: 12px 25px;
+                margin: 12px 0;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 1em;
+                width: 100%;
+                max-width: 220px;
+                transition: background-color 0.3s ease-in-out,
+                  transform 0.3s ease-in-out;
+              }
+
+              .button:hover {
+                background-color: #1c75d8;
+                transform: translateY(-3px);
+              }
+
+              .separator {
+                width: 100%;
+                height: 1px;
+                background-color: #4f4f4f;
+                margin: 15px 0;
+              }
+            `}</style>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  const buttonStyle = {
+    backgroundColor: "#5A67D8",
+    color: "white",
+    padding: "15px 35px",
+    textAlign: "center",
+    textDecoration: "none",
+    transition: "all 0.3s ease",
+    display: "inline-block",
+    fontSize: "16px",
+    margin: "4px 2px",
+    cursor: "pointer",
+    borderRadius: "12px",
+    boxShadow: "0 4px 8px 0 rgba(0, 0, 0, 0.2)",
+    border: "none",
+    justifyContent: "center",
+    display: "inline-block",
+  };
+
   return (
     <main className="container">
       <div className="box">
         <header className="header">
-          <h1>Claims</h1>
+          <h1>Guess Game</h1>
         </header>
-        {initUser()}
+        {renderStepContent()}
+
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop={false}
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
       </div>
+
       <style jsx>{`
+        @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap");
+
         .container {
           display: flex;
-          justify-content: center;
+          flex-direction: column;
           align-items: center;
-          height: 97vh;
-          background-color: #004d40; /* Dark teal background */
-          font-family: "Roboto", sans-serif; /* Modern font */
+          justify-content: center;
+          min-height: 100vh;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          font-family: "Poppins", sans-serif;
+          padding: 2rem;
         }
 
         .box {
-          border: none;
-          border-radius: 20px;
-          padding: 40px;
-          background-color: #ffffff; /* White background */
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15); /* Larger shadow */
-          transition: transform 0.3s ease; /* Smooth transition */
+          max-width: 700px;
+          width: 100%;
+          padding: 50px;
+          background: white;
+          border-radius: 16px;
+          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+          transform: scale(1);
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .box:hover {
-          transform: translateY(-10px); /* Lift on hover */
+          transform: scale(1.02);
         }
 
         .header {
-          background-color: #00796b; /* Cool teal */
-          color: #ffffff;
-          padding: 15px 30px;
-          border-radius: 15px;
-          margin-bottom: 35px;
           text-align: center;
-          box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1); /* Shadow for the header */
+          margin-bottom: 1.5rem;
         }
 
-        .header h1 {
-          margin: 0;
-          font-size: 2.5em; /* Larger font size */
-          font-weight: bold;
+        .button {
+          background-color: #5a67d8;
+          color: white;
+          padding: 12px 24px;
+          border: none;
+          border-radius: 8px;
+          cursor: pointer;
+          font-size: 16px;
+          text-align: center;
+          box-shadow: 0 8px 16px rgba(90, 103, 216, 0.3);
+          transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .button:hover {
+          background-color: #434190;
+          box-shadow: 0 12px 24px rgba(67, 65, 144, 0.4);
         }
       `}</style>
     </main>

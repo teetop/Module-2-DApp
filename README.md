@@ -1,10 +1,66 @@
  
-# ERC20
+# Game
 
-ERC20 is a simple ERC-20 smart contract with a functional decentralized application (DApp) integrated with the smart contract. The smart contract mimics the standard ERC-20 smart contract where the owner can mint tokens for the user, the user can transfer tokens, check the balance, and burn no-longer-needed tokens.
+Game is a simple smart contract with a functional decentralized application (DApp) integrated with the smart contract. The smart contract is a gaming contract where the owner sets a mystery letter and require the players to guess the letter. The players stake to guess.
 
 ## Description
-This program is a Dapp created using a javascript framework to connect to the blockchain - ethers.js and some javascript codes. On the front-end, there are 2 frames on the right and left. The left frame is basically for the admin where the owner mints tokens and checks the total supply, though anyone can check the total supply while the right frame is where users can transfer tokens, check their balance, and burn their tokens.
+This program is a Dapp created using a javascript framework to connect to the blockchain - ethers.js and some javascript codes. On the front-end, the players can only guess the letter only when the owner have set the letter.
+
+## Smart Contract
+```javascript
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.18;
+
+
+contract Game {
+
+    address immutable owner;
+    bytes32 mistery;
+
+    mapping(address => uint256) public balanceOf;
+
+    event GamePlayed(string result);
+
+    constructor(address[] memory players) {
+        owner = msg.sender;
+        initializePlayers(players);
+    }
+
+    function initializePlayers(address[] memory players) private {
+        for (uint256 i = 0; i < players.length; i++) {
+            balanceOf[players[i]] = 1000;
+        }
+    }
+
+    function setMistery(string memory _mistery) external returns(bool) {
+        require(msg.sender == owner, "ONLY_OWNER");
+
+        mistery = keccak256(abi.encodePacked(_mistery));
+        return true;
+    }
+
+    function playGame(uint256 _amount, string memory _guess) external {
+        require(msg.sender != owner, "OWNER_CANNOT_PLAY!");
+        require(balanceOf[msg.sender] >= _amount, "INSUFFICIENT BALANCE");
+
+        bytes32 result = keccak256(abi.encodePacked(_guess));
+         uint256 _perc = (_amount * 10) / 100;
+         string memory message;
+
+        if (result == mistery) {
+            balanceOf[msg.sender] += _perc;
+            message = "You Won!";
+            
+        } else {
+            balanceOf[msg.sender] -= _amount;
+            message = "You lost!";
+        }
+
+        emit GamePlayed(message);
+
+    }
+}
+```
 
 # Getting Started
 
